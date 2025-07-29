@@ -4,7 +4,7 @@ from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 
 # 🔐 Token va API kalitni shu yerga joylang
-TELEGRAM_TOKEN = "8338047326:AAGf3OAgZyG-XXMRhzHdoRfVBNLu-o65fg4
+TELEGRAM_TOKEN = "8338047326:AAGf3OAgZyG-XXMRhzHdoRfVBNLu-o65fg4"
 VT_API_KEY = "5f6b2c23c95cbe0a3c0f2221dea2859b766a304a3ecfc59d06e21c457a212872"
 
 # --- VirusTotal fayl skan ---
@@ -32,23 +32,30 @@ def scan_url_with_virustotal(url_to_scan):
 def get_analysis_result(analysis_id):
     url = f"https://www.virustotal.com/api/v3/analyses/{analysis_id}"
     headers = {"x-apikey": VT_API_KEY}
-    for _ in range(5):  # 5 marta tekshiramiz, tahlil tugashini kutamiz
-        response = requests.get(url, headers=headers)
-        if response.status_code == 200:
-            data = response.json()
-            status = data["data"]["attributes"]["status"]
-            if status == "completed":
-                stats = data["data"]["attributes"]["stats"]
-                return f"""
+    for i in range(5):
+        try:
+            response = requests.get(url, headers=headers)
+            if response.status_code == 200:
+                data = response.json()
+                status = data["data"]["attributes"]["status"]
+                print(f"{i+1}/5 → Status: {status}")
+
+                if status == "completed":
+                    stats = data["data"]["attributes"]["stats"]
+                    return f"""
 🔍 VirusTotal tahlil natijasi:
 
 🟥 Tahlikali (malicious): {stats.get("malicious", 0)}
 🟨 Shubhali (suspicious): {stats.get("suspicious", 0)}
 🟩 Zararsiz (harmless): {stats.get("harmless", 0)}
 ❓ Aniqlanmagan: {stats.get("undetected", 0)}
-                """.strip()
-        time.sleep(5)  # Har 5 soniyada qaytadan tekshir
-    return "⏳ Tahlil hali tugamagan yoki xatolik yuz berdi."
+                    """.strip()
+            else:
+                print(f"❌ So‘rovda xatolik: {response.status_code} - {response.text}")
+        except Exception as e:
+            print(f"⚠️ Xatolik yuz berdi: {str(e)}")
+        time.sleep(5)
+    return "⏳ 25 soniya kutildi, lekin VirusTotal hali javob bermadi yoki xatolik bo‘ldi."
 
 # --- Fayl yuborilganda ---
 async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
